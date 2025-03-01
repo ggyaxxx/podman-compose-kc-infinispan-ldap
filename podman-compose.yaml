@@ -1,27 +1,32 @@
 version: '3.8'
 
+networks:
+  podman:
+    driver: bridge
+
 services:
   infinispan:
-   image: quay.io/infinispan/server
-   container_name: infinispan
-   restart: unless-stopped
-   network_mode: "host"
-   ports:
-     - "11222:11222"
-   environment:
-    USER: "admin"
-    PASS: "admin"
-   volumes:
-    - infinispan_data:/opt/infinispan/server/data
-    - infinispan_log:/opt/infinispan/server/log
-    - infinispan_config:/opt/infinispan/server/config
+    image: quay.io/infinispan/server
+    container_name: infinispan
+    restart: unless-stopped
+    networks:
+      - podman
+    ports:
+      - "11222:11222"
+    environment:
+      USER: "admin"
+      PASS: "admin"
+    volumes:
+      - infinispan_data:/opt/infinispan/server/data
+      - infinispan_log:/opt/infinispan/server/log
+      - infinispan_config:/opt/infinispan/server/config
 
-   
   ldap:
     image: osixia/openldap:latest
     container_name: apacheds
-    network_mode: "host"
     restart: unless-stopped
+    networks:
+      - podman
     ports:
       - "1389:389"   # Porta LDAP
       - "1636:636"   # Porta LDAPS (se abilitata)
@@ -37,7 +42,8 @@ services:
     image: postgres:15
     container_name: keycloak-db
     restart: unless-stopped
-    network_mode: "host"
+    networks:
+      - podman
     ports:
       - "5432:5432"
     environment:
@@ -48,19 +54,20 @@ services:
       - keycloak_db:/var/lib/postgresql/data
 
   keycloak:
-    network_mode: "host"
     image: quay.io/keycloak/keycloak:latest
     container_name: keycloak
     restart: unless-stopped
     depends_on:
       - postgres
       - ldap
+    networks:
+      - podman
     ports:
       - "8080:8080"
       - "8443:8443"
     environment:
       KC_DB: postgres
-      KC_DB_URL_HOST: postgres
+      KC_DB_URL_HOST: keycloak-db  # Usa il nome del container
       KC_DB_URL_DATABASE: keycloak
       KC_DB_USERNAME: keycloak
       KC_DB_PASSWORD: supersecurepassword
@@ -79,3 +86,4 @@ volumes:
   infinispan_data:
   infinispan_log:
   infinispan_config:
+
